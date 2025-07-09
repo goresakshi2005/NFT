@@ -1,0 +1,194 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Certificate Verification</title>
+  <script src="https://cdn.jsdelivr.net/npm/web3@1.5.2/dist/web3.min.js"></script>
+</head>
+<body>
+  <div id="verification-container">
+    <h1>Certificate Verification</h1>
+    
+    <div id="contract-interface">
+      <h2>Connect to Contract</h2>
+      <input type="text" id="contractAddress" placeholder="CertificateNFT Contract Address">
+      <button onclick="connectContract()">Connect</button>
+    </div>
+    
+    <div id="certificate-verification" style="display:none;">
+      <input type="text" id="tokenId" placeholder="Certificate Token ID">
+      <button onclick="verifyCertificate()">Verify Certificate</button>
+      <div id="certificate-info"></div>
+      <div id="verification-result"></div>
+    </div>
+  </div>
+
+  <script>
+    let contract;
+    let contractABI = [
+      {
+        "inputs": [],
+        "stateMutability": "nonpayable",
+        "type": "constructor"
+      },
+      {
+        "anonymous": false,
+        "inputs": [
+          {
+            "indexed": true,
+            "internalType": "uint256",
+            "name": "tokenId",
+            "type": "uint256"
+          },
+          {
+            "indexed": false,
+            "internalType": "string",
+            "name": "studentName",
+            "type": "string"
+          },
+          {
+            "indexed": false,
+            "internalType": "string",
+            "name": "courseName",
+            "type": "string"
+          },
+          {
+            "indexed": false,
+            "internalType": "uint256",
+            "name": "issueDate",
+            "type": "uint256"
+          },
+          {
+            "indexed": false,
+            "internalType": "string",
+            "name": "ipfsHash",
+            "type": "string"
+          }
+        ],
+        "name": "CertificateIssued",
+        "type": "event"
+      },
+      {
+        "inputs": [
+          {
+            "internalType": "uint256",
+            "name": "tokenId",
+            "type": "uint256"
+          }
+        ],
+        "name": "getCertificate",
+        "outputs": [
+          {
+            "internalType": "string",
+            "name": "studentName",
+            "type": "string"
+          },
+          {
+            "internalType": "string",
+            "name": "courseName",
+            "type": "string"
+          },
+          {
+            "internalType": "uint256",
+            "name": "issueDate",
+            "type": "uint256"
+          },
+          {
+            "internalType": "string",
+            "name": "ipfsHash",
+            "type": "string"
+          }
+        ],
+        "stateMutability": "view",
+        "type": "function"
+      },
+      {
+        "inputs": [
+          {
+            "internalType": "address",
+            "name": "recipient",
+            "type": "address"
+          },
+          {
+            "internalType": "string",
+            "name": "studentName",
+            "type": "string"
+          },
+          {
+            "internalType": "string",
+            "name": "courseName",
+            "type": "string"
+          },
+          {
+            "internalType": "string",
+            "name": "ipfsHash",
+            "type": "string"
+          }
+        ],
+        "name": "issueCertificate",
+        "outputs": [
+          {
+            "internalType": "uint256",
+            "name": "",
+            "type": "uint256"
+          }
+        ],
+        "stateMutability": "nonpayable",
+        "type": "function"
+      }
+    ];
+    
+    async function connectContract() {
+      const contractAddress = document.getElementById('contractAddress').value;
+      
+      if (window.ethereum) {
+        try {
+          await window.ethereum.request({ method: 'eth_requestAccounts' });
+          const web3 = new Web3(window.ethereum);
+          contract = new web3.eth.Contract(contractABI, contractAddress);
+          
+          document.getElementById('contract-interface').style.display = 'none';
+          document.getElementById('certificate-verification').style.display = 'block';
+          
+          console.log('Contract connected successfully');
+        } catch (error) {
+          console.error('Error connecting to contract:', error);
+          alert('Error connecting to contract: ' + error.message);
+        }
+      } else {
+        alert('Please install MetaMask or another Ethereum wallet extension');
+      }
+    }
+    
+    async function verifyCertificate() {
+      const tokenId = document.getElementById('tokenId').value;
+      
+      if (!tokenId) {
+        document.getElementById('verification-result').innerHTML = 
+          '<p style="color: red;">Please enter a certificate ID</p>';
+        return;
+      }
+      
+      try {
+        const certificate = await contract.methods.getCertificate(tokenId).call();
+        
+        document.getElementById('certificate-info').innerHTML = `
+          <h2>Certificate Details</h2>
+          <p><strong>Student Name:</strong> ${certificate.studentName}</p>
+          <p><strong>Course Name:</strong> ${certificate.courseName}</p>
+          <p><strong>Issue Date:</strong> ${new Date(certificate.issueDate * 1000).toLocaleDateString()}</p>
+          <p><strong>IPFS Hash:</strong> ${certificate.ipfsHash}</p>
+          <p><a href="https://ipfs.io/ipfs/${certificate.ipfsHash}" target="_blank">View Certificate on IPFS</a></p>
+        `;
+        
+        document.getElementById('verification-result').innerHTML = 
+          '<p style="color: green;">✓ This certificate is valid and verified on the blockchain</p>';
+      } catch (error) {
+        document.getElementById('verification-result').innerHTML = 
+          '<p style="color: red;">✗ This certificate could not be verified</p>';
+      }
+    }
+  </script>
+</body>
+</html>
